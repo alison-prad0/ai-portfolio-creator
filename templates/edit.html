@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Paso 2: Edición y Portafolio</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f4; }
+        .image-container { 
+            border: 1px solid #ccc; 
+            margin: 15px; 
+            padding: 15px; 
+            background-color: white; 
+            border-radius: 8px;
+            display: inline-block;
+        }
+        img { 
+            max-width: 300px; 
+            height: auto; 
+            display: block; 
+            margin-top: 10px; 
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <h1>Imágenes Subidas y Listas para Edición</h1>
+    <p>Se subieron **{{ filenames|length }}** imágenes. Ahora las editaremos y generaremos el PDF.</p>
+
+    {% for filename in filenames %}
+        <div class="image-container">
+            <h3>{{ filename }}</h3>
+            <img src="{{ url_for('uploaded_file', filename=filename) }}" alt="{{ filename }}">
+            
+            <p style="margin-top: 15px;">
+                <label>Título / Marca de agua:</label>
+                <input type="text" placeholder="Escribe un título para el PDF">
+            </p>
+
+            <p>
+                <button disabled>Aplicar Filtro B/N (Próximamente)</button>
+                <button disabled>Pedir Edición a IA (Próximamente)</button>
+            </p>
+        </div>
+    {% endfor %}
+
+    <hr>
+    <h2>3. Crear PDF Final</h2>
+    <p>Una vez que estés conforme con las ediciones, genera tu portafolio.</p>
+    <form action="/create-pdf" method="post">
+        <button type="submit" style="padding: 10px 20px; background-color: #28a745; color: white; border: none; border-radius: 5px;">Generar Portafolio en PDF</button>
+    </form>
+</body>
+</html>
