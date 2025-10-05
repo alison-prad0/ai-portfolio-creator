@@ -24,12 +24,19 @@
 </head>
 <body>
     <h1>Imágenes Subidas y Listas para Edición</h1>
-    <p>Se subieron **{{ filenames|length }}** imágenes. Ahora las editaremos y generaremos el PDF.</p>
+    <p>Se subieron **{{ filenames|length }}** imágenes. Selecciona cuáles quieres incluir en tu PDF.</p>
 
     {% for filename in filenames %}
         <div class="image-container">
-            <h3>{{ filename }}</h3>
+            <h3>{{ filename.split('_', 1)[1] if '_' in filename else filename }}</h3>
             <img src="{{ url_for('uploaded_file', filename=filename) }}" alt="{{ filename }}">
+            
+            <p style="margin-top: 15px;">
+                <label>
+                    <input type="checkbox" name="selected_images" value="{{ filename }}" checked>
+                    Incluir en el PDF
+                </label>
+            </p>
             
             <p style="margin-top: 15px;">
                 <label>Título / Marca de agua:</label>
@@ -45,9 +52,16 @@
 
     <hr>
     <h2>3. Crear PDF Final</h2>
-    <p>Una vez que estés conforme con las ediciones, genera tu portafolio.</p>
+    <p>Una vez que estés conforme con las ediciones, genera tu portafolio con las imágenes seleccionadas.</p>
     <form action="/create-pdf" method="post">
-        <button type="submit" style="padding: 10px 20px; background-color: #28a745; color: white; border: none; border-radius: 5px;">Generar Portafolio en PDF</button>
+        <button type="submit" style="padding: 10px 20px; background-color: #28a745; color: white; border: none; border-radius: 5px; margin-right: 10px;">Generar Portafolio en PDF</button>
+    </form>
+    
+    <hr>
+    <h2>4. Limpiar Imágenes</h2>
+    <p>Si quieres eliminar todas las imágenes subidas:</p>
+    <form action="/cleanup" method="post" onsubmit="return confirm('¿Estás seguro de que quieres eliminar todas las imágenes?')">
+        <button type="submit" style="padding: 10px 20px; background-color: #dc3545; color: white; border: none; border-radius: 5px;">Limpiar Todas las Imágenes</button>
     </form>
 </body>
 </html>
