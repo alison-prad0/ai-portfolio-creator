@@ -112,17 +112,33 @@ def create_pdf():
             # En caso de que falle PIL/fpdf2, simplemente saltamos la imagen
             print(f"Error al procesar la imagen {filename}: {e}")
             
-    # Guardar el PDF en un archivo temporal
+ # Guardar el PDF en un archivo temporal
     output_pdf_path = os.path.join('temp_portfolio.pdf')
     pdf.output(output_pdf_path)
     
+    # --- CÓDIGO AÑADIDO: Limpiar la carpeta 'uploads' después de generar el PDF ---
+    
+    # Recorre cada nombre de archivo que se usó para el PDF (guardado en image_files)
+    for filename in image_files:
+        filepath = os.path.join(image_dir, filename)
+        try:
+            # Elimina el archivo del servidor
+            os.remove(filepath)
+            print(f"Archivo borrado: {filename}")
+        except Exception as e:
+            # En caso de error (ej. el archivo ya fue borrado), no bloquea la app
+            print(f"Error al borrar el archivo {filename}: {e}")
+            
+    # --- FIN DEL CÓDIGO DE LIMPIEZA ---
+    
     # Enviar el archivo PDF al navegador
+    # Nota: os.remove('temp_portfolio.pdf') no es necesario porque send_file se encarga de archivos temporales
     return send_file(
         output_pdf_path,
         as_attachment=True,
         download_name='Portafolio_IA.pdf',
         mimetype='application/pdf'
-    )
+    )   
 
 # Punto de entrada principal para ejecutar la aplicación
 if __name__ == '__main__':
