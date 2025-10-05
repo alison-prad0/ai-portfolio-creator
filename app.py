@@ -90,40 +90,43 @@ def uploaded_file(filename):
 # 4. Ruta para generar el PDF
 @app.route('/create-pdf', methods=['POST'])
 def create_pdf():
-    # Obtener las imágenes seleccionadas del formulario
+    # Obtener el ID de sesión único del usuario
+    session_id = session.get('current_upload_id')
+    if not session_id:
+        return "Error: No se encontró la sesión de subida.", 400
+
+    # Obtener las imágenes seleccionadas del formulario (solo nombres originales sin ID)
     selected_images = request.form.getlist('selected_images')
-    
     if not selected_images:
         return "No hay imágenes seleccionadas para generar el PDF.", 400
-    
+
     image_dir = app.config['UPLOAD_FOLDER']
-    image_files = selected_images
+    image_files_to_process = [] # Lista de nombres de archivos completos (con ID)
+
+    # 1. Reconstruir los nombres de archivos REALES usando el ID de sesión
+    for original_name in selected_images:
+        # El nombre del archivo en el servidor es: ID_original.ext
+        # No usamos secure_filename porque el original_name ya está seguro (viene del formulario)
+        full_filename = f"{session_id}_{original_name}"
+        image_files_to_process.append(full_filename)
 
     # Inicializar el objeto PDF
     pdf = FPDF()
-    
-    # Parámetros del PDF (por ejemplo, tamaño A4)
-    # 210 y 297 son las dimensiones de A4 en mm
     PDF_WIDTH = 210
     PDF_HEIGHT = 297
-    
-    # Procesar cada imagen
-    for filename in image_files:
+
+    # 2. Procesar cada imagen
+    for filename in image_files_to_process: # Usamos la lista REAL de archivos
         filepath = os.path.join(image_dir, filename)
-        
-        # 1. Agregar una nueva página para cada imagen
+
         pdf.add_page()
-        
-        # 2. Insertar la imagen, ajustando el tamaño
+
+        # Insertar la imagen, ajustando el tamaño... (El resto de tu lógica está bien)
         try:
-            # Ya importamos Image arriba, así que la usamos directamente
             img = Image.open(filepath)
             img_width, img_height = img.size
-            
-            # Calcular la relación de aspecto y el tamaño para que quepa en el PDF
             ratio = img_width / img_height
-            
-            # Ajustar dimensiones para que quepa en el PDF
+
             if ratio > 1:
                 pdf_w = PDF_WIDTH * 0.9
                 pdf_h = pdf_w / ratio
@@ -131,46 +134,36 @@ def create_pdf():
                 pdf_h = PDF_HEIGHT * 0.9
                 pdf_w = pdf_h * ratio
                 
-            # Centrar la imagen
             x = (PDF_WIDTH - pdf_w) / 2
             y = (PDF_HEIGHT - pdf_h) / 2
             
             pdf.image(filepath, x=x, y=y, w=pdf_w)
             
-            # Opcional: Escribir el nombre del archivo
             pdf.set_xy(10, 10)
             pdf.set_font('Arial', 'B', 12)
             pdf.cell(0, 10, filename, 0, 1, 'L')
             
         except Exception as e:
-            # En caso de que falle PIL/fpdf2, simplemente saltamos la imagen
             print(f"Error al procesar la imagen {filename}: {e}")
             
- # Guardar el PDF en un archivo temporal
+    # 3. Guardar el PDF en un archivo temporal
     output_pdf_path = os.path.join('temp_portfolio.pdf')
     pdf.output(output_pdf_path)
     
-    # --- CÓDIGO AÑADIDO: Limpiar solo las imágenes usadas en el PDF ---
-    
-    # Recorre cada nombre de archivo que se usó para el PDF
-    for filename in image_files:
+    # --- CÓDIGO DE LIMPIEZA FINAL: Solo borra los archivos usados por ESTA sesión ---
+    for filename in image_files_to_process:
         filepath = os.path.join(image_dir, filename)
         try:
-            # Elimina el archivo del servidor
             os.remove(filepath)
             print(f"Archivo borrado: {filename}")
         except Exception as e:
-            # En caso de error (ej. el archivo ya fue borrado), no bloquea la app
             print(f"Error al borrar el archivo {filename}: {e}")
             
     # Limpiar la sesión después de generar el PDF
     session.pop('uploaded_files', None)
     session.pop('current_upload_id', None)
             
-    # --- FIN DEL CÓDIGO DE LIMPIEZA ---
-    
     # Enviar el archivo PDF al navegador
-    # Nota: os.remove('temp_portfolio.pdf') no es necesario porque send_file se encarga de archivos temporales
     return send_file(
         output_pdf_path,
         as_attachment=True,

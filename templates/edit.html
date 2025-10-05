@@ -26,34 +26,36 @@
     <h1>Imágenes Subidas y Listas para Edición</h1>
     <p>Se subieron **{{ filenames|length }}** imágenes. Selecciona cuáles quieres incluir en tu PDF.</p>
 
-    {% for filename in filenames %}
-        <div class="image-container">
-            <h3>{{ filename.split('_', 1)[1] if '_' in filename else filename }}</h3>
-            <img src="{{ url_for('uploaded_file', filename=filename) }}" alt="{{ filename }}">
-            
-            <p style="margin-top: 15px;">
-                <label>
-                    <input type="checkbox" name="selected_images" value="{{ filename }}" checked>
-                    Incluir en el PDF
-                </label>
-            </p>
-            
-            <p style="margin-top: 15px;">
-                <label>Título / Marca de agua:</label>
-                <input type="text" placeholder="Escribe un título para el PDF">
-            </p>
-
-            <p>
-                <button disabled>Aplicar Filtro B/N (Próximamente)</button>
-                <button disabled>Pedir Edición a IA (Próximamente)</button>
-            </p>
-        </div>
-    {% endfor %}
-
     <hr>
-    <h2>3. Crear PDF Final</h2>
-    <p>Una vez que estés conforme con las ediciones, genera tu portafolio con las imágenes seleccionadas.</p>
+    <h2>2. Seleccionar Imágenes para el PDF</h2>
     <form action="/create-pdf" method="post">
+        {% for filename in filenames %}
+            <div class="image-container">
+                <h3>{{ filename.split('_', 1)[1] if '_' in filename else filename }}</h3>
+                <img src="{{ url_for('uploaded_file', filename=filename) }}" alt="{{ filename }}">
+                
+                <p style="margin-top: 15px;">
+                    <label>
+                        <input type="checkbox" name="selected_images" value="{{ filename.split('_', 1)[1] if '_' in filename else filename }}" checked>
+                        Incluir en el PDF
+                    </label>
+                </p>
+                
+                <p style="margin-top: 15px;">
+                    <label>Título / Marca de agua:</label>
+                    <input type="text" placeholder="Escribe un título para el PDF">
+                </p>
+
+                <p>
+                    <button type="button" disabled>Aplicar Filtro B/N (Próximamente)</button>
+                    <button type="button" disabled>Pedir Edición a IA (Próximamente)</button>
+                </p>
+            </div>
+        {% endfor %}
+
+        <hr>
+        <h2>3. Crear PDF Final</h2>
+        <p>Una vez que estés conforme con las ediciones, genera tu portafolio con las imágenes seleccionadas.</p>
         <button type="submit" style="padding: 10px 20px; background-color: #28a745; color: white; border: none; border-radius: 5px; margin-right: 10px;">Generar Portafolio en PDF</button>
     </form>
     
