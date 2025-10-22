@@ -7,21 +7,17 @@ from PIL import Image # <-- Importación de Pillow (PIL)
 # Importaciones para IA
 from google import genai
 from dotenv import load_dotenv
-
-# Cargar la clave del archivo .env (funciona localmente)
-load_dotenv()
-# Inicializar el cliente de Gemini.
+# Inicializar el cliente de Gemini a None
+gemini_client = None
 try:
-    # Esto busca la clave que acabamos de cargar del .env
+   # Esto busca la clave del .env (local) o de las variables de entorno (Render)
     gemini_client = genai.Client()
+except Exception:
+ # Si falla (clave no encontrada), gemini_client sigue siendo None
+    pass
 except Exception:
     # Permite que la aplicación corra sin la clave si está en el servidor de Render
     pass 
-
-# --- CONFIGURACIÓN ---
-app = Flask(__name__)
-# ... (el resto del código continúa aquí)
-
 
 # --- CONFIGURACIÓN ---
 app = Flask(__name__)
@@ -226,17 +222,20 @@ def cleanup_all():
     
     return f"Se eliminaron {removed_count} archivos", 200
 
-# 5. Ruta de Edición con IA: Genera título y descripción
+# 6. Ruta de Edición con IA: Genera título y descripción
 @app.route('/generate-ia', methods=['POST'])
 def generate_ia():
-    # Obtener el prompt del usuario y los nombres de archivo de la sesión
     user_prompt = request.form.get('ia_prompt')
     current_filenames = session.get('uploaded_files', [])
 
     if not user_prompt:
-        # Si el usuario no escribe nada, regresa a la página de edición con un mensaje
         return render_template('edit.html', filenames=current_filenames, ia_result="Por favor, escribe tu instrucción para la IA.")
     
+    # VERIFICACIÓN CRÍTICA: Si el cliente no se inicializó, devuelve el error CLARO
+    if gemini_client is None:
+        error_msg = "Error: El Asistente de IA no se pudo conectar. Verifica que la variable GEMINI_API_KEY esté correctamente configurada en Render."
+        return render_template('edit.html', filenames=current_filenames, ia_result=error_msg)
+
     # 1. Definir la instrucción precisa (el "prompt") para Gemini
     prompt = f"""
     Eres un experto en branding y diseño de portafolios.
@@ -253,16 +252,15 @@ def generate_ia():
     
     # 2. Llamar a la API de Gemini
     try:
-        # Usamos el cliente inicializado con la clave del .env
         response = gemini_client.models.generate_content(
-            model="gemini-2.5-flash", # Un modelo rápido y potente para texto
+            model="gemini-2.5-flash",
             contents=prompt
         )
         
         ia_result = response.text.strip()
         
     except Exception as e:
-        ia_result = f"Error de IA: No se pudo conectar con Gemini. Verifica tu clave de API o tu conexión. Detalles: {e}"
+        ia_result = f"Error de IA: Falló la comunicación con Gemini. Detalles: {e}"
 
     # 3. Regresar a la página de edición con el resultado
     return render_template('edit.html', filenames=current_filenames, ia_result=ia_result)
