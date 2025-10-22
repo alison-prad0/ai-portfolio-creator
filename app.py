@@ -1,10 +1,13 @@
-# Inicializar el cliente de Gemini.
+# Inicializar la variable del cliente de Gemini a None para que siempre exista.
+gemini_client = None
+
 try:
-    # Esto busca la clave que acabamos de cargar del .env
+    # Intentar inicializar el cliente (busca la clave en Render o en .env)
     gemini_client = genai.Client()
-except Exception:
-    # Permite que la aplicación corra sin la clave si está en el servidor de Render
-    pass
+except Exception as e:
+    # Si falla, gemini_client sigue siendo None.
+    # Es vital que el servidor NO se caiga, y este try/except lo evita.
+    print(f"ADVERTENCIA: Cliente de Gemini no se inicializó. Error: {e}")
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # Define las extensiones de archivo permitidas (seguridad)
