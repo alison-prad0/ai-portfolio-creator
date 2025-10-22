@@ -1,3 +1,16 @@
+# --- 1. IMPORTACIONES CORREGIDAS (Todas al inicio) ---
+from flask import Flask, render_template, request, redirect, url_for, send_from_directory, send_file, session
+import os
+from werkzeug.utils import secure_filename
+from fpdf import FPDF 
+from PIL import Image # <-- Importación de Pillow (PIL)
+# Importaciones para IA
+from google import genai
+from dotenv import load_dotenv
+
+# Cargar variables de entorno desde .env si existe (para desarrollo local)
+load_dotenv()
+
 # Inicializar la variable del cliente de Gemini a None para que siempre exista.
 gemini_client = None
 
@@ -8,6 +21,16 @@ except Exception as e:
     # Si falla, gemini_client sigue siendo None.
     # Es vital que el servidor NO se caiga, y este try/except lo evita.
     print(f"ADVERTENCIA: Cliente de Gemini no se inicializó. Error: {e}")
+
+# --- CONFIGURACIÓN ---
+app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'tu_clave_secreta_aqui')  # Necesario para sesiones
+
+# Crea una carpeta llamada 'uploads' para guardar temporalmente las imágenes
+UPLOAD_FOLDER = 'uploads'
+# Verifica si la carpeta 'uploads' existe, si no, la crea
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # Define las extensiones de archivo permitidas (seguridad)
@@ -248,4 +271,7 @@ def generate_ia():
 
 # Punto de entrada principal para ejecutar la aplicación
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Configuración para desarrollo local
+    port = int(os.environ.get('PORT', 5000))
+    debug_mode = os.environ.get('FLASK_ENV') != 'production'
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)
