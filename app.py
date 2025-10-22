@@ -1,32 +1,10 @@
-# --- 1. IMPORTACIONES CORREGIDAS (Todas al inicio) ---
-from flask import Flask, render_template, request, redirect, url_for, send_from_directory, send_file, session
-import os
-from werkzeug.utils import secure_filename
-from fpdf import FPDF 
-from PIL import Image # <-- Importación de Pillow (PIL)
-# Importaciones para IA
-from google import genai
-from dotenv import load_dotenv
-# Inicializar el cliente de Gemini a None
-gemini_client = None
+# Inicializar el cliente de Gemini.
 try:
-   # Esto busca la clave del .env (local) o de las variables de entorno (Render)
+    # Esto busca la clave que acabamos de cargar del .env
     gemini_client = genai.Client()
 except Exception:
- # Si falla (clave no encontrada), gemini_client sigue siendo None
-    pass
-except Exception:
     # Permite que la aplicación corra sin la clave si está en el servidor de Render
-    pass 
-
-# --- CONFIGURACIÓN ---
-app = Flask(__name__)
-app.secret_key = 'tu_clave_secreta_aqui'  # Necesario para sesiones
-# Crea una carpeta llamada 'uploads' para guardar temporalmente las imágenes
-UPLOAD_FOLDER = 'uploads'
-# Verifica si la carpeta 'uploads' existe, si no, la crea
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+    pass
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # Define las extensiones de archivo permitidas (seguridad)
