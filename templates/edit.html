@@ -2,14 +2,17 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edición y Generación de Portafolio</title>
+    
     <style>
-        /* Estilos Dark Mode Elegante */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #121212; /* Fondo casi negro */
             color: #e0e0e0; /* Texto gris claro */
             margin: 0;
             padding: 20px;
+            text-align: center; /* Centrar el contenido principal */
         }
         h1 {
             color: #ffffff; /* Título blanco */
@@ -17,26 +20,35 @@
             padding-bottom: 10px;
             margin-bottom: 30px;
             font-weight: 300;
-            text-align: center;
+            display: inline-block; /* Para que el borde solo sea tan ancho como el texto */
+        }
+        form {
+            text-align: left; /* Alinear el formulario a la izquierda, luego centramos los contenedores */
+            display: inline-block; /* Envuelve el formulario para que se pueda centrar */
+        }
+        .images-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center; /* Centrar los contenedores de imágenes */
+            gap: 25px; /* Espacio entre las imágenes */
+            margin-bottom: 30px;
         }
         .image-container { 
             background-color: #1f1f1f; /* Contenedor gris oscuro */
             border: 1px solid #333; 
             padding: 20px; 
-            margin: 15px; 
             border-radius: 10px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-            display: inline-block; 
-            width: 300px; 
-            vertical-align: top;
+            width: 280px; /* Ancho fijo para las miniaturas */
             text-align: center;
         }
         .image-container img { 
             max-width: 100%; 
             height: auto; 
+            max-height: 200px; /* Altura máxima para miniaturas */
             display: block; 
-            margin: 0 auto 15px auto; /* Centrar imagen */
-            border-radius: 8px;
+            margin: 0 auto 15px auto; 
+            border-radius: 6px;
         }
         input[type="text"] {
             border: 1px solid #555;
@@ -47,8 +59,15 @@
             width: 90%;
             margin-top: 5px;
         }
+        .pdf-button-section {
+            padding: 20px;
+            background-color: #1f1f1f;
+            border-radius: 10px;
+            margin-top: 30px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
         button[type="submit"] {
-            background-color: #00ADB5; /* Usar el acento vibrante */
+            background-color: #00ADB5; /* Acento vibrante */
             color: #1f1f1f;
             border: none;
             padding: 15px 30px;
@@ -57,62 +76,118 @@
             font-size: 18px;
             font-weight: bold;
             transition: background-color 0.3s ease, transform 0.1s ease;
-            margin-top: 20px;
-            width: 100%;
-            max-width: 400px;
         }
         button[type="submit"]:hover {
             background-color: #008D93;
             transform: translateY(-2px);
         }
-        hr {
-            border-top: 1px solid #333;
-            margin: 30px 0;
+        footer {
+            margin-top: 40px;
+            font-size: 0.9em;
+            color: #777;
+        }
+        /* Estilos para el Panel de IA */
+        .ia-panel {
+            background-color: #1f1f1f;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            margin-bottom: 30px;
+            width: 90%;
+            max-width: 700px;
+            display: inline-block;
+            text-align: center;
+            border: 1px solid #00ADB5; /* Borde de acento para la IA */
+        }
+        .ia-form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .ia-panel textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #555;
+            background-color: #2c2c2c;
+            color: #e0e0e0;
+            resize: vertical;
+            font-size: 1em;
+        }
+        .ia-output {
+            margin-top: 25px;
+            padding: 15px;
+            background-color: #121212;
+            border-radius: 8px;
+            text-align: left;
+            border-left: 3px solid #00ADB5;
+        }
+        .ia-output h3 {
+            margin-top: 0;
+            color: #00ADB5;
+        }
+        .ia-output pre {
+            white-space: pre-wrap; /* Respeta los saltos de línea de la IA */
+            font-family: monospace;
+            background-color: #1f1f1f;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            color: #ffffff;
         }
     </style>
 </head>
 <body>
     <h1>Imágenes Subidas y Listas para Edición</h1>
-    <p>Se subieron **{{ filenames|length }}** imágenes. Selecciona cuáles quieres incluir en tu PDF.</p>
+    <div class="ia-panel">
+        <h2>Asistente de Contenido IA</h2>
+        <p>Describe el estilo o el tema que quieres para tu portafolio:</p>
+        
+        <form action="{{ url_for('generate_ia') }}" method="post" class="ia-form">
+            <textarea name="ia_prompt" placeholder="Ej: 'Quiero un título elegante para un portafolio de fotos de paisajes urbanos con nombres de flores.'" required></textarea>
+            <button type="submit">Generar Título y Descripción con IA</button>
+        </form>
+        
+        {% if ia_result %}
+        <div class="ia-output">
+            <h3>Resultado de la IA:</h3>
+            <pre>{{ ia_result }}</pre>
+            <p>💡 Copia el Título y la Descripción generados y pégalos en los campos de Título del Portafolio.</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <hr style="border: 0; border-top: 1px solid #333; margin: 30px 0;">
 
-    <hr>
-    <h2>2. Seleccionar Imágenes para el PDF</h2>
-    <form action="/create-pdf" method="post">
-        {% for filename in filenames %}
+    <p>Se subieron **{{ filenames|length }}** imágenes. Ahora personaliza los títulos.</p>
+
+    <form action="{{ url_for('create_pdf') }}" method="post">
+        
+        <div class="images-grid">
+            {% for filename in filenames %}
             <div class="image-container">
-                <h3>{{ filename.split('_', 1)[1] if '_' in filename else filename }}</h3>
                 <img src="{{ url_for('uploaded_file', filename=filename) }}" alt="{{ filename }}">
                 
-                <p style="margin-top: 15px;">
-                    <label>
-                        <input type="checkbox" name="selected_images" value="{{ filename.split('_', 1)[1] if '_' in filename else filename }}" checked>
-                        Incluir en el PDF
-                    </label>
-                </p>
+                <input type="hidden" name="selected_images" value="{{ filename.split('_', 1)[1] if '_' in filename else filename }}">
                 
-                <p style="margin-top: 15px;">
-                    <label>Título / Marca de agua:</label>
-                    <input type="text" placeholder="Escribe un título para el PDF">
-                </p>
-
-                <p>
-                    <button type="button" disabled>Aplicar Filtro B/N (Próximamente)</button>
-                    <button type="button" disabled>Pedir Edición a IA (Próximamente)</button>
-                </p>
+                <p><strong>Archivo:</strong> {{ filename.split('_', 1)[1] if '_' in filename else filename }}</p>
+                <p>Título del Portafolio: <input type="text" name="title_{{ filename.split('_', 1)[1] if '_' in filename else filename }}" value="" placeholder="Título o descripción..."></p>
             </div>
-        {% endfor %}
-
-        <hr>
-        <h2>3. Crear PDF Final</h2>
-        <p>Una vez que estés conforme con las ediciones, genera tu portafolio con las imágenes seleccionadas.</p>
-        <button type="submit" style="padding: 10px 20px; background-color: #28a745; color: white; border: none; border-radius: 5px; margin-right: 10px;">Generar Portafolio en PDF</button>
+            {% endfor %}
+        </div>
+        
+        <div class="pdf-button-section">
+            <button type="submit">
+                Generar Portafolio en PDF
+            </button>
+        </div>
     </form>
     
-    <hr>
-    <h2>4. Limpiar Imágenes</h2>
-    <p>Si quieres eliminar todas las imágenes subidas:</p>
-    <form action="/cleanup" method="post" onsubmit="return confirm('¿Estás seguro de que quieres eliminar todas las imágenes?')">
-        <button type="submit" style="padding: 10px 20px; background-color: #dc3545; color: white; border: none; border-radius: 5px;">Limpiar Todas las Imágenes</button>
-    </form>
+    <footer>
+        <p>Proyecto de Portafolio por Alison Prado</p>
+    </footer>
 </body>
 </html>

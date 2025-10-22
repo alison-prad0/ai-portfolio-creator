@@ -4,6 +4,24 @@ import os
 from werkzeug.utils import secure_filename
 from fpdf import FPDF 
 from PIL import Image # <-- Importación de Pillow (PIL)
+# Importaciones para IA
+from google import genai
+from dotenv import load_dotenv
+
+# Cargar la clave del archivo .env (funciona localmente)
+load_dotenv()
+# Inicializar el cliente de Gemini.
+try:
+    # Esto busca la clave que acabamos de cargar del .env
+    gemini_client = genai.Client()
+except Exception:
+    # Permite que la aplicación corra sin la clave si está en el servidor de Render
+    pass 
+
+# --- CONFIGURACIÓN ---
+app = Flask(__name__)
+# ... (el resto del código continúa aquí)
+
 
 # --- CONFIGURACIÓN ---
 app = Flask(__name__)
@@ -118,15 +136,21 @@ def create_pdf():
     # 2. Procesar cada imagen
     for filename in image_files_to_process: # Usamos la lista REAL de archivos
         filepath = os.path.join(image_dir, filename)
-
-        pdf.add_page()
-
-        # Insertar la imagen, ajustando el tamaño... (El resto de tu lógica está bien)
+        
+        # Obtener el nombre base del archivo (sin el ID de sesión)
+        base_filename = filename.split('_', 1)[1] if '_' in filename else filename
+        
+        # 1. Obtener el título que el usuario escribió para esta imagen
+        title_field_name = f'title_{base_filename}'
+        user_title = request.form.get(title_field_name, "Portafolio de Imágenes (Sin Título)") # Obtiene el texto del formulario
+        
+        # Intenta agregar la imagen y el título al PDF
         try:
+            # 2. Lógica de Redimensionamiento (similar a la que tenías)
             img = Image.open(filepath)
             img_width, img_height = img.size
             ratio = img_width / img_height
-
+            
             if ratio > 1:
                 pdf_w = PDF_WIDTH * 0.9
                 pdf_h = pdf_w / ratio
@@ -137,14 +161,24 @@ def create_pdf():
             x = (PDF_WIDTH - pdf_w) / 2
             y = (PDF_HEIGHT - pdf_h) / 2
             
-            pdf.image(filepath, x=x, y=y, w=pdf_w)
+            # 3. Agregar la página y la imagen
+            pdf.add_page()
             
-            pdf.set_xy(10, 10)
-            pdf.set_font('Arial', 'B', 12)
-            pdf.cell(0, 10, filename, 0, 1, 'L')
+            # 4. Agregar el TÍTULO (fijado en la parte superior)
+            pdf.set_xy(10, 10) # Fija la posición muy cerca de la esquina superior izquierda
+            pdf.set_font('Arial', 'B', 16) 
+            pdf.set_text_color(20, 20, 20)
+            pdf.cell(0, 10, user_title, 0, 1, 'C') # 0: ancho total, C: CENTRADO
+
+            # AGREGAR SALTO DE LÍNEA GRANDE para que la imagen no toque el título
+            pdf.ln(15) 
+            
+            # Resto de la lógica de la imagen
+            pdf.image(filepath, x, pdf.get_y(), pdf_w, pdf_h) # Usamos pdf.get_y() para la coordenada y
             
         except Exception as e:
-            print(f"Error al procesar la imagen {filename}: {e}")
+            # MANTENER: El bloque de error original
+            print(f"Error al procesar la imagen {base_filename}: {e}")
             
     # 3. Guardar el PDF en un archivo temporal
     output_pdf_path = os.path.join('temp_portfolio.pdf')
@@ -191,6 +225,47 @@ def cleanup_all():
                 print(f"Error al eliminar {filename}: {e}")
     
     return f"Se eliminaron {removed_count} archivos", 200
+
+# 5. Ruta de Edición con IA: Genera título y descripción
+@app.route('/generate-ia', methods=['POST'])
+def generate_ia():
+    # Obtener el prompt del usuario y los nombres de archivo de la sesión
+    user_prompt = request.form.get('ia_prompt')
+    current_filenames = session.get('uploaded_files', [])
+
+    if not user_prompt:
+        # Si el usuario no escribe nada, regresa a la página de edición con un mensaje
+        return render_template('edit.html', filenames=current_filenames, ia_result="Por favor, escribe tu instrucción para la IA.")
+    
+    # 1. Definir la instrucción precisa (el "prompt") para Gemini
+    prompt = f"""
+    Eres un experto en branding y diseño de portafolios.
+    Genera un título muy llamativo y elegante, y una breve descripción
+    para un portafolio de imágenes. El usuario ha dado la siguiente instrucción:
+    "{user_prompt}"
+
+    Asegúrate de que el título sea corto y de alto impacto.
+    
+    Formato de Salida Requerido (DEBES usar este formato exacto):
+    Título: [Título generado aquí]
+    Descripción: [Descripción generada aquí]
+    """
+    
+    # 2. Llamar a la API de Gemini
+    try:
+        # Usamos el cliente inicializado con la clave del .env
+        response = gemini_client.models.generate_content(
+            model="gemini-2.5-flash", # Un modelo rápido y potente para texto
+            contents=prompt
+        )
+        
+        ia_result = response.text.strip()
+        
+    except Exception as e:
+        ia_result = f"Error de IA: No se pudo conectar con Gemini. Verifica tu clave de API o tu conexión. Detalles: {e}"
+
+    # 3. Regresar a la página de edición con el resultado
+    return render_template('edit.html', filenames=current_filenames, ia_result=ia_result)
 
 # Punto de entrada principal para ejecutar la aplicación
 if __name__ == '__main__':
